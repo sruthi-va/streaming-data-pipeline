@@ -31,3 +31,29 @@ The goal is to detect abnormal environmental conditions and monitor sensor healt
   "location": "warehouse_A"
 }
 ```
+
+## Event Frequency
+
+Each IoT sensor generates one telemetry event every 2 seconds.
+
+For this project, multiple sensors will run simultaneously, creating a continuous stream of real-time events.
+
+## Simulated Data Quality Issues
+
+To make the streaming pipeline more realistic, the producer will occasionally generate imperfect data.
+
+### Missing Values
+- Some events will have a missing temperature value.
+- Expected behavior: Reject the event and log it for later review.
+
+### Temperature Spikes
+- Some events will contain unrealistic temperature values.
+- Expected behavior: Flag the event as an anomaly while keeping it in the data.
+
+### Late Events
+- Some events will arrive after a delay.
+- Expected behavior: Accept late events if they arrive within the allowed processing window.
+
+### Duplicate Events
+- Some events will be sent more than once.
+- Expected behavior: Detect and remove duplicate events before calculating metrics.
