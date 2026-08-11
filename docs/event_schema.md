@@ -57,3 +57,29 @@ To make the streaming pipeline more realistic, the producer will occasionally ge
 ### Duplicate Events
 - Some events will be sent more than once.
 - Expected behavior: Detect and remove duplicate events before calculating metrics.
+
+## Expected Data Anomalies
+
+### Temperature spikes
+Approximately 5% of readings may contain an abnormally high
+temperature to simulate a malfunctioning sensor.
+
+### Missing values
+Approximately 5% of readings may contain a missing temperature
+or humidity value.
+
+### Late events
+Approximately 5% of events may contain a timestamp several
+minutes older than the current time to simulate delayed sensor
+connectivity.
+
+### Duplicate events
+Some events may be published more than once to simulate
+duplicate messages.
+
+## Expected Handling
+
+- Temperature spikes: flag as anomalous rather than automatically deleting
+- Missing values: identify and handle during validation
+- Late events: handle using event-time processing and watermarking
+- Duplicate events: identify and deduplicate where possible
