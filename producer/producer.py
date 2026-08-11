@@ -1,5 +1,9 @@
 from datetime import datetime, timedelta
+import json
 import random
+import time
+
+from kafka import KafkaProducer
 
 
 sensors = {
@@ -15,7 +19,7 @@ def generate_event(sensor_id, location):
 
     # Occasionally create a temperature spike
     if random.random() < 0.05:
-        temperature = random.uniform(200, 300)
+        temperature = round(random.uniform(200, 300), 1)
 
     # Occasionally create a missing temperature
     if random.random() < 0.05:
@@ -31,14 +35,14 @@ def generate_event(sensor_id, location):
     # Generate battery level
     battery_level = random.randint(80, 100)
 
-    # Normally use the current timestamp
+    # Generate timestamp
     timestamp = datetime.now()
 
     # Occasionally create a late timestamp
     if random.random() < 0.05:
         timestamp = timestamp - timedelta(minutes=2)
 
-    event = {
+    return {
         "sensor_id": sensor_id,
         "timestamp": timestamp.isoformat(),
         "temperature": temperature,
@@ -47,9 +51,26 @@ def generate_event(sensor_id, location):
         "location": location
     }
 
-    return event
+
+# Connect to Kafka
+producer = KafkaProducer(
+    bootstrap_servers="localhost:9092"
+)
 
 
-for sensor_id, location in sensors.items():
-    event = generate_event(sensor_id, location)
-    print(event)
+# Continuously generate and send events
+while True:
+
+    for sensor_id, location in sensors.items():
+
+        event = generate_event(sensor_id, location)
+
+        producer.send(
+            "iot-sensor-readings",
+            value=json.dumps(event).encode("utf-8")
+        )
+
+        print(f"Sent: {event}")
+
+    # Wait 2 seconds before generating the next batch
+    time.sleep(2)
