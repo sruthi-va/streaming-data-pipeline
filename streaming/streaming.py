@@ -8,7 +8,16 @@ spark = (
 )
 
 print("Spark started successfully!")
-print(f"Spark version: {spark.version}")
+
+df = (
+    spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("subscribe", "iot-sensor-readings")
+    .option("startingOffsets", "earliest")
+    .load()
+)
+
+print("Successfully connected to Kafka!")
 
 spark.stop()
-print("Spark stopped.")
