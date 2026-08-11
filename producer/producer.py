@@ -1,9 +1,20 @@
 from datetime import datetime, timedelta
 import json
+import logging
 import random
 import time
 
 from kafka import KafkaProducer
+from kafka.errors import KafkaError
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 
 sensors = {
@@ -14,31 +25,27 @@ sensors = {
 
 
 def generate_event(sensor_id, location):
-    # Generate a normal temperature
     temperature = round(random.uniform(65, 80), 1)
 
-    # Occasionally create a temperature spike
+    # Temperature spike
     if random.random() < 0.05:
         temperature = round(random.uniform(200, 300), 1)
 
-    # Occasionally create a missing temperature
+    # Missing temperature
     if random.random() < 0.05:
         temperature = None
 
-    # Generate humidity
     humidity = round(random.uniform(30, 60), 1)
 
-    # Occasionally create a missing humidity
+    # Missing humidity
     if random.random() < 0.05:
         humidity = None
 
-    # Generate battery level
     battery_level = random.randint(80, 100)
 
-    # Generate timestamp
     timestamp = datetime.now()
 
-    # Occasionally create a late timestamp
+    # Late timestamp
     if random.random() < 0.05:
         timestamp = timestamp - timedelta(minutes=2)
 
@@ -52,25 +59,67 @@ def generate_event(sensor_id, location):
     }
 
 
-# Connect to Kafka
-producer = KafkaProducer(
-    bootstrap_servers="localhost:9092"
-)
+def create_producer():
+    try:
+        logger.info("Connecting to Kafka...")
 
-
-# Continuously generate and send events
-while True:
-
-    for sensor_id, location in sensors.items():
-
-        event = generate_event(sensor_id, location)
-
-        producer.send(
-            "iot-sensor-readings",
-            value=json.dumps(event).encode("utf-8")
+        producer = KafkaProducer(
+            bootstrap_servers="localhost:9092"
         )
 
-        print(f"Sent: {event}")
+        logger.info("Successfully connected to Kafka.")
 
-    # Wait 2 seconds before generating the next batch
-    time.sleep(2)
+        return producer
+
+    except KafkaError as error:
+        logger.error(f"Could not connect to Kafka: {error}")
+        return None
+
+
+producer = create_producer()
+
+if producer is None:
+    logger.error("Producer could not start. Exiting.")
+    raise SystemExit(1)
+
+
+try:
+    while True:
+
+        for sensor_id, location in sensors.items():
+
+            event = generate_event(sensor_id, location)
+
+            try:
+                future = producer.send(
+                    "iot-sensor-readings",
+                    value=json.dumps(event).encode("utf-8")
+                )
+
+                # Wait for Kafka to confirm the message
+                future.get(timeout=10)
+
+                logger.info(
+                    f"Sent event from {sensor_id}"
+                )
+
+            except KafkaError as error:
+                logger.error(
+                    f"Failed to send event from {sensor_id}: {error}"
+                )
+
+        time.sleep(2)
+
+
+except KeyboardInterrupt:
+    logger.info("Producer interrupted. Shutting down...")
+
+
+finally:
+    logger.info("Flushing remaining messages...")
+    producer.flush()
+
+    logger.info("Closing Kafka producer...")
+    producer.close()
+
+    logger.info("Producer shut down successfully.")
