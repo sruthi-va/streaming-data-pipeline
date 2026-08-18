@@ -2,10 +2,10 @@
 
 ## Overview
 
-A real-time IoT sensor data pipeline built using:
+A real-time IoT sensor data pipeline that ingests, processes, validates, and visualizes streaming data using:
 
 - Python
-- Kafka
+- Apache Kafka
 - Spark Structured Streaming
 - TimescaleDB
 - Grafana
@@ -13,4 +13,5 @@ A real-time IoT sensor data pipeline built using:
 
 ## Architecture
 
-Producer → Kafka → Spark Streaming → TimescaleDB → Grafana
+```text
+Python Producer → Kafka → Spark Structured Streaming → TimescaleDB → Grafana
